@@ -8,19 +8,20 @@ import SearchStatus from "../../ui/searchStatus";
 import UserTable from "../../ui/usersTable";
 import _ from "lodash";
 import { useUser } from "../../../hooks/useUsers";
+import { useAuth } from "../../../hooks/useAuth";
+import { useSelector } from "react-redux";
+import { getProfessions } from "../../../store/professions";
+
 const UsersListPage = () => {
+    const { currentUser } = useAuth();
     const { users } = useUser();
+    const professions = useSelector(getProfessions());
     const [currentPage, setCurrentPage] = useState(1);
-    const [professions, setProfession] = useState();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedProf, setSelectedProf] = useState();
     const [sortBy, setSortBy] = useState({ path: "name", order: "asc" });
     const pageSize = 8;
 
-    const handleDelete = (userId) => {
-        // setUsers(users.filter((user) => user._id !== userId));
-        console.log(userId);
-    };
     const handleToggleBookMark = (id) => {
         const newArray = users.map((user) => {
             if (user._id === id) {
@@ -31,10 +32,6 @@ const UsersListPage = () => {
         // setUsers(newArray);
         console.log(newArray);
     };
-
-    useEffect(() => {
-        api.professions.fetchAll().then((data) => setProfession(data));
-    }, []);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -57,21 +54,25 @@ const UsersListPage = () => {
     };
 
     if (users) {
-        const filteredUsers = searchQuery
-            ? users.filter(
-                  (user) =>
-                      user.name
-                          .toLowerCase()
-                          .indexOf(searchQuery.toLowerCase()) !== -1
-              )
-            : selectedProf
-            ? users.filter(
-                  (user) =>
-                      JSON.stringify(user.profession) ===
-                      JSON.stringify(selectedProf)
-              )
-            : users;
-
+        function filterUsers(data) {
+            const filteredUsers = searchQuery
+                ? data.filter(
+                      (user) =>
+                          user.name
+                              .toLowerCase()
+                              .indexOf(searchQuery.toLowerCase()) !== -1
+                  )
+                : selectedProf
+                ? data.filter(
+                      (user) =>
+                          JSON.stringify(user.profession) ===
+                          JSON.stringify(selectedProf)
+                  )
+                : data;
+            // Hide logged in user in the users list.
+            return filteredUsers.filter((u) => u._id !== currentUser._id);
+        }
+        const filteredUsers = filterUsers(users);
         const count = filteredUsers.length;
         const sortedUsers = _.orderBy(
             filteredUsers,
@@ -115,7 +116,6 @@ const UsersListPage = () => {
                             users={usersCrop}
                             onSort={handleSort}
                             selectedSort={sortBy}
-                            onDelete={handleDelete}
                             onToggleBookMark={handleToggleBookMark}
                         />
                     )}
